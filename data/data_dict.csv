@@ -1,0 +1,70 @@
+varname,type,levels/range,description
+pat_id,integer,,Unique patient identifier
+idx_ed,integer,,Identifier of the index ED attendance
+idx_urine,integer,,Identifier of the index urine sample
+admitted,factor,"no, yes",Flag if admitted as an inpatient after ED
+susp,factor,"Urosepsis, Pyelo, UTI, UTI symptoms, LRTI, Sepsis, Other Infection, Altered mental status, Abdominal pain, Genitourinary problem, Other, Not recorded",Recorded suspicion of infection
+cytometrie,factor,"no, yes",Flag if flow cytometrie was performed
+results,factor,"no, yes",Flag if culture results are available
+hmg,factor,"no, yes",Flag if heavy mixed growth
+uti_risk,character,,Classification into low/mid/high risk of UTI (unused)
+growth,factor,"no, yes",Flag if growth >10^4 cfu/mL
+ua_bacteria,numeric,>=0,Urinalysis bacteria count (1/muL)
+ua_casts_total,numeric,>=0,Urinalysis casts count (1/muL)
+ua_casts_prcnt,numeric,0-1,Urinalysis casts percentage pathological (%)
+ua_conductivity,numeric,>=0,Urinalysis conductivity (mS/cm)
+ua_epithelial,numeric,>=0,Urinalysis epithelial cells (1/muL)
+ua_other,numeric,>=0,Urinalysis other (unused)
+ua_rbc_total,numeric,>=0,Urinalysis RBC count (1/muL)
+ua_rbc_prcnt,numeric,0-1,Urinalysis RBC non-lysed (%)
+ua_sml_rnd_cells,numeric,>=0,Urinalysis small round cells (1/muL)
+ua_sperm,numeric,>=0,Urinalysis sperm count (unused)
+ua_wbc,numeric,>=0,Urinalysis WBC count (1/muL)
+ua_crystals,numeric,>=0,Urinalysis crystals (1/muL)
+ua_yeast,numeric,>=0,Urinalysis yeast count (1/muL)
+age,factor,"18 - 24, 25 - 34, 35 - 44, 45 - 54, 55 - 64, 65 - 74, 75 - 84, 85 - 94, 95 - 104",Age group
+sex,factor,"male, female",Sex
+ethnicity,factor,"white, asian, black, mixed, other, unknown",Ethnic group
+cci,integer,>=0,Charlson Comorbidity Index
+cancer,factor,"no, yes",Flag if patient has cancer diagnosis
+immuno,factor,"no, yes",Flag if patient is immunocompromised
+renal,factor,"no, yes",Flag if patient has renal comorbidity
+uro,factor,"no, yes",Flag if patient has urological comorbidity
+renal_surg,factor,"no, yes",Flag if patient had renal/uro surgery
+hosp_uti_30d,factor,"no, yes",Flag if hospitalised for UTI in previous 30 days
+hosp_uti_12m,factor,"no, yes",Flag if hospitalised for UTI in previous year
+hosp_uti_n_24m,integer,>=0,Number of hospitalisations for UTI in previous 2 years
+ed_uti_12m,factor,"no, yes",Flag if attended the ED for UTI in previous year
+ed_uti_n_24m,integer,>=0,Number of ED attendances for UTI in previous 2 years
+urine_12m,factor,"no, yes",Flag if urine sample was taken in previous year
+pos_12m,factor,"no, yes",Flag if urine sample was positive in previous year
+abx_12m,factor,"no, yes",Flag if antibiotics were given in hospital in previous year
+hosp_n_12m,integer,>=0,Number of all-cause hospitalisations in previous year
+hosp_days_12m,integer,>=0,Number of days in hospital in previous year
+hosp_7d,factor,"no, yes",Flag if discharged from hospital in previous week
+ed_n_12m,integer,>=0,Number of all-cause ED attendances in previous year
+rr,numeric,>=0,Respiratory rate (bpm)
+bp,numeric,>=0,Systolic blood pressure (mmHg)
+o2,numeric,>=0,Oxygen saturation (%)
+hr,numeric,>=0,Heart rate (bpm)
+temp,numeric,>=0,Body temperature (C)
+avpu,character,,AVPU score 
+sews,numeric,>=0,SEWS score
+wcc,numeric,>=0,White cell count (10^3/mL)
+crp,numeric,>=0,C-reactive protein (mg/L)
+pao2,numeric,>=0,PaO2 (unused)
+fio2,numeric,>=0,FiO2 (unused)
+pafio2,numeric,>=0,Ratio of PaO2 and FiO2 (unused)
+plats,numeric,>=0,Platelets (10^9/L)
+bili,numeric,>=0,Bilirubin (mumol/L)
+creat,numeric,>=0,Creatinine (mumol/L)
+alp,numeric,>=0,Alkaline phosphatase (IU/L)
+abx,factor,"no, yes",Flag if antibiotics were given in current visit
+arrival_date,POSIXct,,Arrival in ED
+departure_date,POSIXct,,Departure from ED
+year,factor,"2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019",Year of visit
+month,factor,"jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec",Month of visit
+day_of_year,integer,1-366,Day of the year
+day_of_week,factor,"mon, tue, wed, thu, fri, sat, sun",Day of the week 
+time_of_day,numeric,0-24,Time of arrival
+time_in_ed,numeric,>=0,Time spent in ED
