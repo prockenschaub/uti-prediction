@@ -1,0 +1,487 @@
+---
+title: "Collect tables"
+output: 
+  pdf_document:
+    keep_tex: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r init, include=FALSE}
+
+# Initialise the working environment
+.dir_root <- "99_manuscript"
+source(file.path(.dir_root, "00_init.R"))
+source(file.path(.dir_root, "04a_define_performance.R"))
+
+# Additional packages
+library(kableExtra)
+
+# Which dataset to use
+rs_size <- "full"
+group <- "full"
+
+
+```
+
+```{r discr-perf-table}
+
+ci <- function(m, s, level = 0.95, digits = 3){
+  # Calculate the confidence interval for an estimate
+  
+  p_low <- (1 - level) / 2
+  p_upp <- level + p_low
+  
+  pad <- partial(str_pad, width = 2 + digits, side = "right", pad = "0")
+  
+  str_c(pad(round(m, digits)), 
+        " (", pad(round(m + qnorm(p_low) * s, digits)), "--", 
+              pad(round(m + qnorm(p_upp) * s, digits)), ")")
+}
+
+
+calculate_discrimination <- function(path, pattern){
+  files <- list.files(path, pattern)
+
+  model_names <- str_extract(files, ".+(?=\\.)")
+  
+  model_perf <- file.path(path, files) %>% 
+    set_names(model_names) %>% 
+    map(read_rds)
+  
+  model_perf %>% 
+    map(~ bind_rows(
+      show_best(., "roc_auc", n = 1),
+      show_best(., "pr_auc", n = 1)
+    )) %>% 
+    map(select, .metric, mean, std_err)
+}
+
+
+make_discrimation_table <- function(perf){
+  # Make a table that summarises the AUROC and AUPRC values of a list 
+  # of models
+  
+  perf %>% 
+    map(mutate, est = ci(mean, std_err)) %>% 
+    map(select, .metric, est) %>% 
+    map_df(spread, key = ".metric", value = "est", .id = "model") %>%
+    mutate(set = str_extract(model, "(full|reduced)")) %>% 
+    arrange(set, desc(roc_auc), desc(pr_auc)) %>% 
+    select(model, roc_auc, pr_auc)
+}
+
+render_latex <- function(table, ncols = 3){
+  kable(
+    table,
+    "latex", 
+    booktabs = TRUE,
+    linesep = "",
+    align = c("l", rep("r", ncols - 1)),
+    escape = FALSE
+  )
+}
+
+```
+
+```{r univar}
+
+mods <- c("lr", "xgb")
+
+tbls <- file.path(.dir_univ, mods) %>% 
+  str_c("_univar.rds") %>% 
+  map(read_rds)
+
+# Get the top ten performing variables
+tbls %<>% 
+  map(arrange, -mean)
+
+# 
+tbl_univar <- tbls %>% 
+  map(mutate, ci = ci(mean, std_err)) %>% 
+  map(select, .var, ci) %>% 
+  bind_cols()
+
+tbl_univar <- bind_cols(list(rank = 1:nrow(tbl_univar)), tbl_univar)
+
+kable(
+    tbl_univar,
+    "latex", 
+    booktabs = TRUE,
+    linesep = "",
+    escape = FALSE
+  )
+
+```
+
+
+# Average cross-validation discrimination performance
+
+## Mean imputation
+
+### Yeo-Johnson transformation
+
+```{r yj-mean-discr}
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "mean", "yj", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+calculate_discrimination(path, pattern) %>% 
+  make_discrimation_table() %>% 
+  render_latex()
+
+```
+
+```{r yj-mean-spec}
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+
+path <- file.path(.dir_perf, "01_discrimination", "full")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced)")
+
+files <- list.files(path, pattern)
+
+model_names <- str_extract(files, ".+(?=_discr_perf)")
+
+model_perf <- file.path(path, files) %>% 
+  set_names(model_names) %>% 
+  map(read_rds)
+
+perf <- model_perf %>% 
+  map(~ bind_rows(
+    show_best(., "roc_auc", n = 1),
+    show_best(., "pr_auc", n = 1),
+    show_best(., "spec", n = 1),
+    show_best(., "npv", n = 1)
+  )) %>% 
+  map(select, .metric, mean, std_err)
+
+perf %>% 
+    map(mutate, est = ci(mean, std_err)) %>% 
+    map(select, .metric, est) %>% 
+    map_df(spread, key = ".metric", value = "est", .id = "model") %>%
+    mutate(set = str_extract(model, "(full|reduced)")) %>% 
+    arrange(set, desc(roc_auc), desc(pr_auc)) %>% 
+    select(model, roc_auc, pr_auc, spec, npv) %>% 
+    render_latex(ncols = 5)
+
+```
+
+
+### Log transformation
+
+```{r log-mean-discr}
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "mean", "log", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+cv_mean_log <- calculate_discrimination(path, pattern) %>% make_discrimation_table() 
+cv_mean_log %>% render_latex()
+
+```
+
+
+### No transformation
+
+```{r none-mean-discr}
+
+models <- c("lr", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "mean", "none", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+calculate_discrimination(path, pattern) %>% make_discrimation_table() %>% render_latex()
+
+```
+
+
+
+## K-Nearest Neighbour imputation
+
+### Log transformation
+
+```{r log-knn-discr}
+
+models <- c("lr", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "knn", "log", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+calculate_discrimination(path, pattern) %>% 
+  make_discrimation_table() %>% 
+  render_latex()
+
+```
+
+
+## K-means imputation
+
+### Log transformation
+
+```{r log-kmeans-discr}
+
+models <- c("lr", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "kmeans", "log", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+calculate_discrimination(path, pattern) %>% 
+  make_discrimation_table() %>% 
+  render_latex()
+
+```
+
+
+
+## Multiple imputation
+
+```{r avg-perf}
+
+average_imputes <- function(metrics){
+  # Average predictions over imputations
+  metrics %>% 
+    bind_rows() %>% 
+    group_by(.metric, .estimator) %>% 
+    summarise(.estimate = mean(.estimate))
+}
+
+calculate_mi_discrimination <- function(path, pattern){
+  files <- list.files(path, pattern)
+
+  model_names <- str_extract(files, ".+(?=\\.)")
+  
+  model_perf <- file.path(path, files) %>% 
+    set_names(model_names) %>% 
+    map(read_rds)
+  
+  avg_perf <- map(
+    model_perf,
+    ~ group_by(., id, id2) %>% 
+        summarise(.metrics = list(average_imputes(.metrics))))
+  
+  model_perf %>% 
+    map(~ bind_rows(
+      show_best(., "roc_auc", n = 1),
+      show_best(., "pr_auc", n = 1)
+    )) %>% 
+    map(select, .metric, mean, std_err)
+}
+
+```
+
+
+### Log transformation
+
+```{r log-mi-discr}
+
+models <- c("lr", "fp")
+
+path <- file.path(.dir_mods, "small", "cv", "mi", "log", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(noind|reduced).rds")
+
+calculate_mi_discrimination(path, pattern) %>% make_discrimation_table() %>% render_latex()
+
+```
+
+
+### No transformation
+
+```{r none-mi-discr}
+
+models <- c("lr", "fp")
+
+path <- file.path(.dir_mods, "small", "cv", "mi", "none", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(noind|reduced).rds")
+
+calculate_mi_discrimination(path, pattern) %>% make_discrimation_table() %>% render_latex()
+
+```
+
+
+
+
+# Average bootstrap discrimination performance
+
+```{r bs-perf}
+
+calculate_bs_discrimination <- function(path, pattern){
+  files <- list.files(path, pattern)
+
+  model_names <- str_extract(files, ".+(?=\\.)")
+  
+  model_perf <- file.path(path, files) %>% 
+    set_names(model_names) %>% 
+    map(read_rds)
+  
+  model_perf %>% 
+    map(~ bind_rows(
+      show_best_bs(., "roc_auc", n = 1),
+      show_best_bs(., "pr_auc", n = 1)
+    )) %>% 
+    map(select, .metric, mean, std_err)
+}
+
+```
+
+## Mean imputation and log transformation
+
+```{r log-bs-discr}
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+
+path <- file.path(.dir_mods, "full", "bs", "mean", "log", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+calculate_bs_discrimination(path, pattern) %>% make_discrimation_table() %>% render_latex()
+
+```
+
+
+
+# Statistic difference between models (CV/mean impute/log transform only)
+
+```{r posterior}
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+
+path <- file.path(.dir_mods, "full", "cv", "mean", "yj", "perf")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced).rds")
+
+files <- list.files(path, pattern)
+
+model_names <- str_extract(files, ".+(?=\\.)")
+
+model_perf <- file.path(path, files) %>% 
+  set_names(model_names) %>% 
+  map(read_rds)
+
+
+get_best_auroc <- function(results){
+  
+  best <- results %>% 
+    show_best("roc_auc", 1) %>% 
+    select(-(.metric:std_err))
+  
+  if(ncol(best) == 0){ 
+    unnest(results, col = ".metrics") %>% filter(.metric == "roc_auc")
+  } else{ 
+    inner_join(best, unnest(results, col = ".metrics")) %>% filter(.metric == "roc_auc")
+  }
+}
+
+side_by_side <- model_perf %>% 
+  map(get_best_auroc) %>% 
+  map(select, id, id2, .estimate) %>% 
+  map2(names(.), ~ rename(.x, !!.y := .estimate)) %>% 
+  reduce(inner_join, by = c("id", "id2"))
+
+options(mc.cores = parallel::detectCores() - 1)
+posterior <- tidyposterior::perf_mod(side_by_side, seed = 9001, iter = 4000)
+
+contrasts <- summary(tidyposterior::contrast_models(
+  posterior, 
+  rep("xgb_full", length(cv_mean_log$model)-1),
+  cv_mean_log$model[-1], 
+  seed = 81
+))
+
+contrasts %<>% mutate(contrast = str_replace(contrast, str_c(cv_mean_log$model[1], " vs "), ""))
+inner_join(cv_mean_log %>% select(model), contrasts, by = c("model" = "contrast"))
+
+```
+
+
+
+# External performance
+
+```{r external}
+
+perf <- file.path(.dir_perf, "01_discrimination", "external", "all_perf.rds") %>% 
+  read_rds()
+
+setDT(perf)
+setkey(perf, model)
+perf[cv_mean_log$model] %>% render_latex(ncols = 6)
+
+
+```
+
+
+
+
+# Average calibration performance
+
+```{r calibration}
+
+get_metric_table <- function(model, metrics = NULL, digits = 2){
+  # From a tibble of performance results, obtain a wide table with one 
+  # column per metric
+  #
+  # Parameters
+  # ----------
+  # model : tibble
+  #   results table for resamples from one model with a `.metric` column; 
+  #   must be in the same format as returned by `tune::tune_grid()`
+  # metrics : character vector
+  #   names of the metrics to gather
+  # digits : integer
+  #   number of digits to round to
+  #
+  # Returns
+  # -------
+  # tibble
+  
+  res <- map_df(metrics, show_best, x = model, n = 1)
+  
+  res %<>% mutate(
+    lower = mean + qnorm(0.025) * std_err,
+    upper = mean + qnorm(0.975) * std_err,
+    summ = str_c(round(mean, 3), 
+                 " (", round(lower, 3), "--", round(upper, 3), ")")
+  ) 
+  
+  res %>% 
+    select(.metric, summ) %>% 
+    spread(".metric", "summ")
+}
+
+
+models <- c("lr", "fp", "net", "rf", "xgb")
+metric_nms <- c("brier_score", "hlc", "hlh", "cal_intercept", "cal_slope")
+
+path <- file.path(.dir_perf, "02_calibration", "small")
+pattern <- str_c("(", str_c(models, collapse = "|"), ")_(full|reduced)_cali_perf.rds")
+
+files <- list.files(path, pattern)
+
+model_names <- str_extract(files, ".+(?=_cali)")
+
+model_perf <- file.path(path, files) %>% 
+  set_names(model_names) %>% 
+  map(read_rds)
+
+# Pool results into wide-format table
+cal <- model_perf %>% 
+  map_df(get_metric_table, metric_nms, .id = "model") %>% 
+  select(model, cal_intercept, cal_slope, hlh) 
+  
+cal[map_int(cv_mean_log$model, ~ which(cal$model == .)),]
+
+setDT(cal)
+setkey(cal, model)
+cal[cv_mean_log$model] %>% render_latex(ncols = 6)
+
+```
+
+
+
+
