@@ -1,6 +1,6 @@
 
 # Initialise the working environment
-.dir_root <- "99_manuscript"
+.dir_root <- "analysis"
 source(file.path(.dir_root, "00_init.R"))
 
 seed <- 2312

@@ -1,7 +1,4 @@
 
-.dir_root <- "99_manuscript"
-.dir_rsmpl <- "99_manuscript/01_resamples"
-
 source(file.path(.dir_root, "00_init.R"))
 
 library(knitr)

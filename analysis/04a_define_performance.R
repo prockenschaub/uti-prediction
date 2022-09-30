@@ -1,6 +1,6 @@
 
 if(!exists(".initialised")){
-  source(file.path("99_manuscript", "00_init.R"))
+  source(file.path("analysis", "00_init.R"))
 }
 
 

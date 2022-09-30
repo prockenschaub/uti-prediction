@@ -1,7 +1,7 @@
 
 if(!exists(".initialised")){
   # Initialise the working environment
-  .dir_root <- "99_manuscript"
+  .dir_root <- "analysis"
   source(file.path(.dir_root, "00_init.R"))
   
   # Which dataset to use
@@ -255,7 +255,7 @@ ggplot(
   )
 
 
-ggsave(file.path("99_manuscript", "02_results", "03_plots", "iterative_perf.png"),
+ggsave(file.path(.dir_results, "03_plots", "iterative_perf.png"),
        width = 5, height = 5, dpi = 300)
 
 
